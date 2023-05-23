@@ -18,13 +18,117 @@ library(parsnip)
 library(timetk)
 library(xgboost)
 library(ggthemes)
+library(highcharter)
+library(fmsb)
+# install.packages("Rcpp")
+library(Rcpp)
 
 useShinyjs(rmd = TRUE)
-setwd('D:/R-programing/project')
+setwd('C:\\Users\\yangxinchen\\Desktop\\yxcgit\\visualization_platform')
 getwd()
 # Load functions
 source("function/TS_function.R")
 source('function/xgboost_forcast_coustomer.R')
+
+########################Data processing for page 3 ##########################
+user_behavior_data <- read_csv('data/user_behavior.csv') 
+setClass("UserBehavior", slots = list(
+  behavior_id = "numeric",
+  user_id = "numeric",
+  product_id = "numeric",
+  categoryId = "numeric",
+  behavior_type = "character",
+  create_time = "numeric",
+  date = "Date",
+  year = "numeric",
+  month = "numeric",
+  day = "numeric",
+  hour = "numeric"
+))
+pv_data <- user_behavior_data[user_behavior_data$behavior_type=='pv',]
+pv_data_object <- new("UserBehavior",
+                      behavior_id = pv_data$behavior_id,
+                      user_id = pv_data$user_id,
+                      product_id = pv_data$product_id,
+                      categoryId = pv_data$categoryId,
+                      behavior_type = pv_data$behavior_type,
+                      create_time = pv_data$create_time,
+                      date = pv_data$date,
+                      year = pv_data$year,
+                      month = pv_data$month,
+                      day = pv_data$day,
+                      hour = pv_data$hour
+)
+cf_data <- user_behavior_data[user_behavior_data$behavior_type=='cart'|user_behavior_data$behavior_type=='fav',]
+cf_data_object <- new("UserBehavior",
+                      behavior_id = cf_data$behavior_id,
+                      user_id = cf_data$user_id,
+                      product_id = cf_data$product_id,
+                      categoryId = cf_data$categoryId,
+                      behavior_type = cf_data$behavior_type,
+                      create_time = cf_data$create_time,
+                      date = cf_data$date,
+                      year = cf_data$year,
+                      month = cf_data$month,
+                      day = cf_data$day,
+                      hour = cf_data$hour
+)
+buy_data <- user_behavior_data[user_behavior_data$behavior_type=='buy',]
+buy_data_object <- new("UserBehavior",
+                      behavior_id = buy_data$behavior_id,
+                      user_id = buy_data$user_id,
+                      product_id = buy_data$product_id,
+                      categoryId = buy_data$categoryId,
+                      behavior_type = buy_data$behavior_type,
+                      create_time = buy_data$create_time,
+                      date = buy_data$date,
+                      year = buy_data$year,
+                      month = buy_data$month,
+                      day = buy_data$day,
+                      hour = buy_data$hour
+)
+merged_data <- rbind(pv_data, cf_data, buy_data)
+
+
+########################Data processing for page 4 ##########################
+order_data <- read_csv('data/orders.csv') 
+
+new_order_data <- order_data %>%
+  group_by(user_id) %>%
+  summarize(min_day = min(18 - day),
+            order_count = n(),
+            total_price = sum(product_price))
+
+# Create data frame
+k_mean_data <- data.frame(user_id = new_order_data$user_id, recency = new_order_data$min_day, frequency = new_order_data$order_count, monetary = new_order_data$total_price)
+# cppFunction('
+#   // Function to create k_mean_data data frame
+#   DataFrame createKMeanData(DataFrame new_order_data) {
+#     // Extract columns from new_order_data
+#     IntegerVector user_id = new_order_data["user_id"];
+#     NumericVector recency = new_order_data["min_day"];
+#     NumericVector frequency = new_order_data["order_count"];
+#     NumericVector monetary = new_order_data["total_price"];
+#     
+#     // Create k_mean_data data frame
+#     DataFrame k_mean_data = DataFrame::create(
+#       _["user_id"] = user_id,
+#       _["recency"] = recency,
+#       _["frequency"] = frequency,
+#       _["monetary"] = monetary
+#     );
+#     
+#     // Return the k_mean_data data frame
+#     return k_mean_data;
+#   }
+# ')
+# 
+# # Use the C++ function to create k_mean_data data frame
+# k_mean_data <- createKMeanData(new_order_data)
+
+
+
+
 
 ########################Data processing for page 5 and page 6 ##########################
 # Load data
@@ -104,28 +208,43 @@ ui <- dashboardPage(
         sidebarLayout(
           sidebarPanel(
             # Add sidebar content for page 1 here
-            selectInput("page3_filter", "Page 1 Filter", choices = c("Option 1", "Option 2"), selected = "Option 1")
+            selectInput("page3_filter", "Page 3 Filter", choices = c("all", "individual"), selected = "all")
           ),
           mainPanel(
-            h2("Page 3"),
-            # Add main panel content for page 1 here
-            textOutput("page3_output")
+            h2("Conversion rate"),
+            # # Add main panel content for page 1 here
+            # highchartOutput("funnel_chart")
+            # Conditional rendering of the funnel chart based on the selected option
+            conditionalPanel(
+              condition = "input.page3_filter == 'all'",
+              highchartOutput("funnel_chart")
+            ),
+            conditionalPanel(
+              condition = "input.page3_filter == 'individual'",
+              highchartOutput("funnel_chart02")
+            )
           )
         )
       ),
-      # Page 4
+      ## tab 4
       tabItem(
         tabName = "page4",
         sidebarLayout(
           sidebarPanel(
-            # Add sidebar content for page 2 here
-            selectInput(
-              "page4_filter", "Predict Month", choices = c("2023-06", "2023-07","2023-08", "2023-09","2023-10", "2023-11"), selected = "Option A")
+            # Add sidebar content for page 1 here
+            selectInput("page4_filter", "Graph type", choices = c("radar", "chart"), selected = "radar")
           ),
           mainPanel(
-            h2("Page 4"),
-            # Add main panel content for page 2 here
-            textOutput("page4_output")
+            h2("Rader-Buyer Group"),
+            # # Add main panel content for page 1 here
+            conditionalPanel(
+              condition = "input.page4_filter == 'radar'",
+              plotlyOutput("segmentation_plot")
+            ),
+            conditionalPanel(
+              condition = "input.page4_filter == 'chart'",
+              plotlyOutput("column_chart")
+            )
           )
         )
       ),
@@ -297,14 +416,183 @@ server <- function(input, output) {
   output$page2_output <- renderText({
     paste("Selected option in Page 2:", input$page2_filter)
   })
-  output$page3_output <- renderText({
-    paste("Selected option in Page 3:", input$page1_filter)
-  })
   
-  output$page4_output <- renderText({
-    paste("Selected option in Page 4:", input$page2_filter)
+ 
+
+  ######## Reactive event for page3 #########################
+  output$funnel_chart <- renderHighchart({
+    
+    req(input$page3_filter)  # Ensure the input is available
+    if (input$page3_filter == "all") {
+      
+    # pv_sum  <- nrow(pv_data)
+    pv_sum  <- length(pv_data_object@behavior_id)
+    cf_sum  <- length(cf_data_object@behavior_id)
+    buy_sum  <- length(buy_data_object@behavior_id)
+    merge_sum <- nrow(merged_data)
+    
+    sum
+    # Calculating conversion rates
+    convert_rate_action <- c(100, cf_sum[[1]] / pv_sum[[1]] * 100, buy_sum[[1]] / pv_sum[[1]] * 100)
+    x_data <- c("Website visit", "Add to cart & Add to favorite", "Buy product")
+    
+    # Creating data for funnel chart
+    data <- data.frame(name = x_data, y = convert_rate_action)
+    
+    # Creating funnel chart
+    hc <- highchart() %>%
+      hc_chart(type = "funnel") %>%
+      hc_title(text = "conversion_rate_action",
+               subtitle = "Browse --> Purchase&Favorite --> Purchase") %>%
+      hc_add_series(data = data,
+                    type = "funnel",
+                    name = "",
+                    dataLabels = list(enabled = TRUE, inside = TRUE),
+                    tooltip = list(pointFormat = "{point.name}: {point.y}%"),
+                    borderColor = "#fff",
+                    borderWidth = 1)
+    
+    hc
+    }
   })
 
+
+  output$funnel_chart02 <- renderHighchart({
+    # pv_sum01<-distinct(pv_data, user_id)
+    req(input$page3_filter)  # Ensure the input is available
+    
+    if (input$page3_filter == "individual") {
+    
+    pv_sum_distinct  <- nrow(distinct(pv_data,user_id))
+    cf_sum_distinct  <- nrow(distinct(cf_data,user_id))
+    buy_sum_distinct  <- nrow(distinct(buy_data,user_id))
+
+    sum
+    # Calculating conversion rates
+    conversion_rate_individual <- c(100, cf_sum_distinct[[1]] / pv_sum_distinct[[1]] * 100, buy_sum_distinct[[1]] / pv_sum_distinct[[1]] * 100)
+    x_data <- c("Website visit", "Add to cart & Add to favorite", "Buy product")
+    
+    # Creating data for funnel chart
+    data <- data.frame(name = x_data, y = conversion_rate_individual)
+    
+    # Creating funnel chart
+    hc <- highchart() %>%
+      hc_chart(type = "funnel") %>%
+      hc_title(text = "conversion_rate_individual",
+               subtitle = "Browse --> Purchase&Favorite --> Purchase") %>%
+      hc_add_series(data = data,
+                    type = "funnel",
+                    name = "",
+                    dataLabels = list(enabled = TRUE, inside = TRUE),
+                    tooltip = list(pointFormat = "{point.name}: {point.y}%"),
+                    borderColor = "#fff",
+                    borderWidth = 1)
+    hc
+    }
+  })
+  
+  ######## Reactive event for page4 #########################
+  
+  output$segmentation_plot <- renderPlotly({
+    req(input$page4_filter)  # Ensure the input is available
+    
+    if (input$page4_filter == "radar") {
+    scaled_data <- k_mean_data %>%
+      select(-user_id) %>%
+      scale()
+    
+    # Perform k-means clustering
+    k <- 3  # Number of clusters
+    kmeans_result <- kmeans(scaled_data, centers = k, nstart = 10)
+    
+    # Get cluster assignments and cluster centers
+    clusters <- kmeans_result$cluster
+    centroids <- kmeans_result$centers
+    
+    # Add cluster assignments to the dataframe
+    k_mean_data$group <- clusters
+    
+    # Restore cluster center coordinates
+    centroids_restored <- centroids * attr(scaled_data, "scaled:scale") + attr(scaled_data, "scaled:center")
+    
+    # Plot the radar chart
+    group1 <- as.list(centroids_restored[1, ])
+    group2 <- as.list(centroids_restored[2, ])
+    group3 <- as.list(centroids_restored[3, ])
+    
+    radar <- plot_ly(type = 'scatterpolar', mode = 'lines')
+    
+    radar <- add_trace(
+      radar,
+      r = c(group1$recency, group1$frequency, group1$monetary),
+      theta = c('recency', 'frequency', 'monetary'),
+      fill = 'toself',
+      name = 'group1',
+      line = list(color = '#f9713c')
+    )
+
+    radar <- add_trace(
+      radar,
+      r = c(group2$recency, group2$frequency, group2$monetary),
+      theta = c('recency', 'frequency', 'monetary'),
+      fill = 'toself',
+      name = 'group2',
+      line = list(color = '#b3e4a1')
+    )
+
+    radar <- add_trace(
+      radar,
+      r = c(group3$recency, group3$frequency, group3$monetary),
+      theta = c('recency', 'frequency', 'monetary'),
+      fill = 'toself',
+      name = 'group3',
+      line = list(color = '#5CACEE')
+    )
+
+    radar <- layout(
+      radar,
+      title = 'Radar-Buyer Group',
+      showlegend = TRUE
+    )
+
+    radar
+    }
+  })
+ 
+  output$column_chart <- renderPlotly({
+    req(input$page4_filter)  # Ensure the input is available
+    
+    if (input$page4_filter == "chart") {
+    
+    scaled_data <- k_mean_data %>%
+      select(-user_id) %>%
+      scale()
+    # Perform k-means clustering
+    k <- 3  # Number of clusters
+    kmeans_result <- kmeans(scaled_data, centers = k, nstart = 10)
+    
+    # Get cluster assignments and cluster centers
+    clusters <- kmeans_result$cluster
+    centroids <- kmeans_result$centers
+    
+    # Add cluster assignments to the dataframe
+    k_mean_data$group <- clusters
+    # Group the data by the 'group' column and calculate the count in each group
+    group_counts <- k_mean_data %>% 
+      group_by(group) %>% 
+      summarize(count = n())
+    
+    # Create the column chart using ggplot2
+    column_chart <- ggplot(group_counts, aes(x = group, y = count)) +
+      geom_col(fill = "#5CACEE", width = 0.5) +  # Set the fill color and width of the columns
+      labs(x = "Group", y = "Count") +  # Set the labels for the x and y axes
+      ggtitle("Group Counts")  # Set the chart title
+    
+    # Return the column chart
+    column_chart
+    }
+  })
+  
   ######## Reactive event for page5 #########################
   #1. Reactive Event: waits until a button (Apply) is clicked to run reactive code 
   processed_data_filtered_tbl <- eventReactive(
