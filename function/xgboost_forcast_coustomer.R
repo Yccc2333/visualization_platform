@@ -1,5 +1,3 @@
-processed_data_tbl
-a=classification_time_series(processed_data_tbl)
 classification_time_series <-
   function(data, time_unit = "month") {
     
