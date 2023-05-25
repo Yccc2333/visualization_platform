@@ -23,12 +23,19 @@ library(highcharter)
 library(fmsb)
 # install.packages("Rcpp")
 library(Rcpp)
-
+#devtools::document(pkg = paste0("own_package/", 
+#                                "PredictFutureOrder"))
+#devtools::check(paste0("own_package/", 
+#                       "PredictFutureOrder"))  #check whether there's problem
+devtools::install(pkg = paste0("own_package/", 
+                               "PredictFutureOrder"), 
+                  reload = TRUE)
+library(PredictFutureOrder)
 useShinyjs(rmd = TRUE)
 #setwd('C:\\Users\\yangxinchen\\Desktop\\yxcgit\\visualization_platform')
+#setwd('D:/R-programing/visualization_platform')
 #getwd()
 # Load functions
-source("function/TS_function.R")
 source('function/xgboost_forcast_coustomer.R')
 
 ########################Data processing for page 3 ##########################
@@ -133,9 +140,7 @@ k_mean_data <- data.frame(user_id = new_order_data$user_id, recency = new_order_
 
 ########################Data processing for page 5 and page 6 ##########################
 # Load data
-sales_data_raw <- read_csv('data/orders02.csv') 
-#country_codes <- read_csv("https://datahub.io/core/country-list/r/data.csv")
-#country_codes <- read_csv('https://raw.githubusercontent.com/plotly/datasets/master/2014_world_gdp_with_codes.csv')
+sales_data_raw <- read_csv('data/orders02.csv',show_col_types = FALSE) 
 
 # Select relevant data
 processed_data_tbl <- sales_data_raw %>% 
