@@ -19,6 +19,8 @@ Imports:
   ggthemes,
   parsnip,
   tibble,
-  timetk
+  timetk, 
+  stats,
+  plotly
 
 

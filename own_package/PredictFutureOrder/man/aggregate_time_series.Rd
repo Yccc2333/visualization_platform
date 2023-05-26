@@ -4,7 +4,7 @@
 \alias{aggregate_time_series}
 \title{A function that aggregates time series data}
 \usage{
-aggregate_time_series(data, time_unit = "month")
+aggregate_time_series(data, ORDERDATE, SALES, time_unit = "month")
 }
 \arguments{
 \item{data}{A tibble format data, including the following columns:
@@ -12,6 +12,10 @@ aggregate_time_series(data, time_unit = "month")
 \item ORDERDATE: A column in POSIXct format, e.g., "2020-02-24", representing the order dates.
 \item SALES: A column recording the sales price.
 }}
+
+\item{ORDERDATE}{A column in POSIXct format, e.g., "2020-02-24", representing the order dates.}
+
+\item{SALES}{A column recording the sales price.}
 
 \item{time_unit}{A character string specifying the time unit to aggregate the data (default: "month").}
 }
@@ -25,15 +29,16 @@ Then it calculates the total sales for each time unit and generates the time ser
 }
 \examples{
 # Example data
-example_data <- tibble::tribble(
+data <- tibble::tribble(
   ~ORDERDATE, ~SALES,
   "2020-02-24", 2871,
   "2020-05-07", 2766,
   "2020-08-30", 3884,
   # More rows...
 )
-example_data$ORDERDATE=as.POSIXct(example_data$ORDERDATE)
-aggregated_data <- aggregate_time_series(example_data, time_unit = "month")
+data$ORDERDATE=as.POSIXct(data$ORDERDATE)
+aggregated_data <- aggregate_time_series(data,
+                                         time_unit = "month")
 }
 \author{
 Ting Wei

@@ -24,12 +24,12 @@ library(fmsb)
 # install.packages("Rcpp")
 library(Rcpp)
 #devtools::document(pkg = paste0("own_package/", 
-#                                "PredictFutureOrder"))
+#                            "PredictFutureOrder"))
 #devtools::check(paste0("own_package/", 
-#                       "PredictFutureOrder"))  #check whether there's problem
-devtools::install(pkg = paste0("own_package/", 
-                               "PredictFutureOrder"), 
-                  reload = TRUE)
+#                "PredictFutureOrder"))  #check whether there's problem
+#devtools::install(pkg = paste0("own_package/", 
+#                             "PredictFutureOrder"), 
+#                 reload = TRUE)
 library(PredictFutureOrder)
 useShinyjs(rmd = TRUE)
 #setwd('C:\\Users\\yangxinchen\\Desktop\\yxcgit\\visualization_platform')
@@ -140,6 +140,7 @@ k_mean_data <- data.frame(user_id = new_order_data$user_id, recency = new_order_
 
 ########################Data processing for page 5 and page 6 ##########################
 # Load data
+#setwd('D:/R-programing/visualization_platform')
 sales_data_raw <- read_csv('data/orders02.csv',show_col_types = FALSE) 
 
 # Select relevant data
@@ -634,6 +635,8 @@ server <- function(input, output) {
     
   }, once = TRUE) 
 
+
+
   # Reactive expression based on input
   time_plot_tbl <- reactive({
     
@@ -647,10 +650,11 @@ server <- function(input, output) {
     
     if (input$forecast_mode) {
       time_plot_tbl() %>%
-        generate_forecast(n_future = input$n_future, seed = 123)
+        generate_forecast(length_out  = input$n_future, seed = 123)
     }
     
   })
+
   #############################################################
 
   
@@ -669,7 +673,7 @@ server <- function(input, output) {
     
   })
   opts <- list(
- 
+    
     pageLength = 10,
     searchHighlight = TRUE
   )

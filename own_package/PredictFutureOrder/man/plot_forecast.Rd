@@ -4,10 +4,14 @@
 \alias{plot_forecast}
 \title{A function that plots the forecasts for the time series data}
 \usage{
-plot_forecast(data)
+plot_forecast(data, key, total_sales)
 }
 \arguments{
 \item{data}{A data frame containing the time series data and forecasts.}
+
+\item{key}{record the actual and predict value, format as "Revenue: $10,032,629 Actual" or "Revenue: $10,032,629 Predictl"}
+
+\item{total_sales}{recording the total_sales basing on time unit}
 }
 \value{
 A plot of the actual and predicted values.

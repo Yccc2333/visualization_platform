@@ -4,12 +4,14 @@
 \alias{generate_forecast}
 \title{A function that generates forecasts for the time series data}
 \usage{
-generate_forecast(data, n_future = 12, seed = NULL)
+generate_forecast(data, total_sales, length_out = 12, seed = NULL)
 }
 \arguments{
 \item{data}{A data frame containing the time series data.}
 
-\item{n_future}{An integer specifying the number of future periods to forecast (default: 12 and min:1).}
+\item{total_sales}{recording the total_sales basing on time unit}
+
+\item{length_out}{An integer specifying the number of future periods to forecast (default: 12 and min:1).}
 
 \item{seed}{An optional seed for reproducibility (default: NULL).}
 }

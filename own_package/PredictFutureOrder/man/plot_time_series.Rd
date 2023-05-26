@@ -2,13 +2,16 @@
 % Please edit documentation in R/TS_function.R
 \name{plot_time_series}
 \alias{plot_time_series}
-\title{aggregated_data <- aggregate_time_series(data, time_unit = "month")
-A function that plots the time series data}
+\title{A function that plots the time series data}
 \usage{
-plot_time_series(data)
+plot_time_series(data, total_sales, date)
 }
 \arguments{
 \item{data}{A data frame containing the time series data.}
+
+\item{total_sales}{recording the total_sales basing on time unit}
+
+\item{date}{A column in POSIXct format, e.g., "2020-02-24", representing the order dates.}
 }
 \value{
 A plot of the time series data.
