@@ -22,6 +22,13 @@ library(highcharter)
 library(fmsb)
 # install.packages("Rcpp")
 library(Rcpp)
+# install.packages("knitr")
+library(knitr)
+install.packages("kableExtra")
+library(kableExtra)
+install.packages("htmlTable")
+library(htmlTable)
+library(DT)
 
 useShinyjs(rmd = TRUE)
 setwd('C:\\Users\\yangxinchen\\Desktop\\yxcgit\\visualization_platform')
@@ -101,27 +108,27 @@ new_order_data <- order_data %>%
 
 # Create data frame
 k_mean_data <- data.frame(user_id = new_order_data$user_id, recency = new_order_data$min_day, frequency = new_order_data$order_count, monetary = new_order_data$total_price)
-# cppFunction('
-#   // Function to create k_mean_data data frame
-#   DataFrame createKMeanData(DataFrame new_order_data) {
-#     // Extract columns from new_order_data
-#     IntegerVector user_id = new_order_data["user_id"];
-#     NumericVector recency = new_order_data["min_day"];
-#     NumericVector frequency = new_order_data["order_count"];
-#     NumericVector monetary = new_order_data["total_price"];
-#     
-#     // Create k_mean_data data frame
-#     DataFrame k_mean_data = DataFrame::create(
-#       _["user_id"] = user_id,
-#       _["recency"] = recency,
-#       _["frequency"] = frequency,
-#       _["monetary"] = monetary
-#     );
-#     
-#     // Return the k_mean_data data frame
-#     return k_mean_data;
-#   }
-# ')
+cppFunction('
+  // Function to create k_mean_data data frame
+  DataFrame createKMeanData(DataFrame new_order_data) {
+    // Extract columns from new_order_data
+    IntegerVector user_id = new_order_data["user_id"];
+    NumericVector recency = new_order_data["min_day"];
+    NumericVector frequency = new_order_data["order_count"];
+    NumericVector monetary = new_order_data["total_price"];
+
+    // Create k_mean_data data frame
+    DataFrame k_mean_data = DataFrame::create(
+      _["user_id"] = user_id,
+      _["recency"] = recency,
+      _["frequency"] = frequency,
+      _["monetary"] = monetary
+    );
+
+    // Return the k_mean_data data frame
+    return k_mean_data;
+  }
+')
 # 
 # # Use the C++ function to create k_mean_data data frame
 # k_mean_data <- createKMeanData(new_order_data)
@@ -240,10 +247,14 @@ ui <- dashboardPage(
             conditionalPanel(
               condition = "input.page4_filter == 'radar'",
               plotlyOutput("segmentation_plot")
+              # ,
+              # tableOutput("column_table") 
             ),
             conditionalPanel(
               condition = "input.page4_filter == 'chart'",
               plotlyOutput("column_chart")
+              ,
+              DT::dataTableOutput("column_table")
             )
           )
         )
@@ -577,6 +588,7 @@ server <- function(input, output) {
     
     # Add cluster assignments to the dataframe
     k_mean_data$group <- clusters
+   
     # Group the data by the 'group' column and calculate the count in each group
     group_counts <- k_mean_data %>% 
       group_by(group) %>% 
@@ -591,6 +603,29 @@ server <- function(input, output) {
     # Return the column chart
     column_chart
     }
+  })
+  
+  output$column_table <- DT::renderDataTable({
+
+      scaled_data <- k_mean_data %>%
+        select(-user_id) %>%
+        scale()
+      # Perform k-means clustering
+      k <- 3  # Number of clusters
+      kmeans_result <- kmeans(scaled_data, centers = k, nstart = 10)
+
+      # Get cluster assignments and cluster centers
+      clusters <- kmeans_result$cluster
+      centroids <- kmeans_result$centers
+
+      # Add cluster assignments to the dataframe
+      k_mean_data$group <- clusters
+
+      datatable(k_mean_data, options = list(dom = 't', paging = FALSE, searching = FALSE))
+      
+      
+      
+
   })
   
   ######## Reactive event for page5 #########################
