@@ -108,31 +108,31 @@ new_order_data <- order_data %>%
             total_price = sum(product_price))
 
 # Create data frame
-k_mean_data <- data.frame(user_id = new_order_data$user_id, recency = new_order_data$min_day, frequency = new_order_data$order_count, monetary = new_order_data$total_price)
-# cppFunction('
-#   // Function to create k_mean_data data frame
-#   DataFrame createKMeanData(DataFrame new_order_data) {
-#     // Extract columns from new_order_data
-#     IntegerVector user_id = new_order_data["user_id"];
-#     NumericVector recency = new_order_data["min_day"];
-#     NumericVector frequency = new_order_data["order_count"];
-#     NumericVector monetary = new_order_data["total_price"];
-#     
-#     // Create k_mean_data data frame
-#     DataFrame k_mean_data = DataFrame::create(
-#       _["user_id"] = user_id,
-#       _["recency"] = recency,
-#       _["frequency"] = frequency,
-#       _["monetary"] = monetary
-#     );
-#     
-#     // Return the k_mean_data data frame
-#     return k_mean_data;
-#   }
-# ')
-# 
+# k_mean_data <- data.frame(user_id = new_order_data$user_id, recency = new_order_data$min_day, frequency = new_order_data$order_count, monetary = new_order_data$total_price)
+cppFunction('
+  // Function to create k_mean_data data frame
+  DataFrame createKMeanData(DataFrame new_order_data) {
+    // Extract columns from new_order_data
+    IntegerVector user_id = new_order_data["user_id"];
+    NumericVector recency = new_order_data["min_day"];
+    NumericVector frequency = new_order_data["order_count"];
+    NumericVector monetary = new_order_data["total_price"];
+
+    // Create k_mean_data data frame
+    DataFrame k_mean_data = DataFrame::create(
+      _["user_id"] = user_id,
+      _["recency"] = recency,
+      _["frequency"] = frequency,
+      _["monetary"] = monetary
+    );
+
+    // Return the k_mean_data data frame
+    return k_mean_data;
+  }
+')
+
 # # Use the C++ function to create k_mean_data data frame
-# k_mean_data <- createKMeanData(new_order_data)
+k_mean_data <- createKMeanData(new_order_data)
 
 
 
