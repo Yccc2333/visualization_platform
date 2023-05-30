@@ -32,8 +32,8 @@ library(Rcpp)
 #                 reload = TRUE)
 library(PredictFutureOrder)
 useShinyjs(rmd = TRUE)
-#setwd('C:\\Users\\yangxinchen\\Desktop\\yxcgit\\visualization_platform')
-#setwd('D:/R-programing/visualization_platform')
+# setwd('C:\\Users\\yangxinchen\\Desktop\\yxcgit\\visualization_platform')
+# setwd('D:/R-programing/visualization_platform')
 #getwd()
 # Load functions
 source('function/xgboost_forcast_coustomer.R')
@@ -108,31 +108,31 @@ new_order_data <- order_data %>%
             total_price = sum(product_price))
 
 # Create data frame
-# k_mean_data <- data.frame(user_id = new_order_data$user_id, recency = new_order_data$min_day, frequency = new_order_data$order_count, monetary = new_order_data$total_price)
-cppFunction('
-  // Function to create k_mean_data data frame
-  DataFrame createKMeanData(DataFrame new_order_data) {
-    // Extract columns from new_order_data
-    IntegerVector user_id = new_order_data["user_id"];
-    NumericVector recency = new_order_data["min_day"];
-    NumericVector frequency = new_order_data["order_count"];
-    NumericVector monetary = new_order_data["total_price"];
-
-    // Create k_mean_data data frame
-    DataFrame k_mean_data = DataFrame::create(
-      _["user_id"] = user_id,
-      _["recency"] = recency,
-      _["frequency"] = frequency,
-      _["monetary"] = monetary
-    );
-
-    // Return the k_mean_data data frame
-    return k_mean_data;
-  }
-')
-
-# # Use the C++ function to create k_mean_data data frame
-k_mean_data <- createKMeanData(new_order_data)
+k_mean_data <- data.frame(user_id = new_order_data$user_id, recency = new_order_data$min_day, frequency = new_order_data$order_count, monetary = new_order_data$total_price)
+# cppFunction('
+#   // Function to create k_mean_data data frame
+#   DataFrame createKMeanData(DataFrame new_order_data) {
+#     // Extract columns from new_order_data
+#     IntegerVector user_id = new_order_data["user_id"];
+#     NumericVector recency = new_order_data["min_day"];
+#     NumericVector frequency = new_order_data["order_count"];
+#     NumericVector monetary = new_order_data["total_price"];
+# 
+#     // Create k_mean_data data frame
+#     DataFrame k_mean_data = DataFrame::create(
+#       _["user_id"] = user_id,
+#       _["recency"] = recency,
+#       _["frequency"] = frequency,
+#       _["monetary"] = monetary
+#     );
+# 
+#     // Return the k_mean_data data frame
+#     return k_mean_data;
+#   }
+# ')
+# 
+# # # Use the C++ function to create k_mean_data data frame
+# k_mean_data <- createKMeanData(new_order_data)
 
 
 
@@ -575,12 +575,87 @@ server <- function(input, output) {
     
     if (input$page4_filter == "chart") {
     
-    scaled_data <- k_mean_data %>%
-      select(-user_id) %>%
-      scale()
-    # Perform k-means clustering
-    k <- 3  # Number of clusters
-    kmeans_result <- kmeans(scaled_data, centers = k, nstart = 10)
+    # scaled_data <- k_mean_data %>%
+    #   select(-user_id) %>%
+    #   scale()
+    # # Perform k-means clustering
+    # k <- 3  # Number of clusters
+    # kmeans_result <- kmeans(scaled_data, centers = k, nstart = 10)
+      ## use c++ and bject-oriented programming
+      cppFunction('
+        #include <Rcpp.h>
+using namespace Rcpp;
+
+class KMeansClustering {
+private:
+  NumericMatrix data;
+  int numClusters;
+
+public:
+  KMeansClustering(NumericMatrix inputData, int k) {
+    data = inputData;
+    numClusters = k;
+  }
+
+  List performClustering() {
+    NumericMatrix scaledData = scaleData();
+    return runKMeans(scaledData);
+  }
+
+private:
+  NumericMatrix scaleData() {
+    NumericMatrix scaledData = clone(data);
+    int numRows = scaledData.nrow();
+    int numCols = scaledData.ncol();
+
+    for (int j = 0; j < numCols; j++) {
+      double mean = 0.0;
+      double sd = 0.0;
+
+      for (int i = 0; i < numRows; i++) {
+        mean += scaledData(i, j);
+      }
+
+      mean /= numRows;
+
+      for (int i = 0; i < numRows; i++) {
+        double diff = scaledData(i, j) - mean;
+        sd += diff * diff;
+      }
+
+      sd /= numRows;
+      sd = sqrt(sd);
+
+      for (int i = 0; i < numRows; i++) {
+        scaledData(i, j) = (scaledData(i, j) - mean) / sd;
+      }
+    }
+
+    return scaledData;
+  }
+
+  List runKMeans(NumericMatrix scaledData) {
+    Environment stats("package:stats");
+    Function kmeans = stats["kmeans"];
+
+    return kmeans(scaledData, Named("centers") = numClusters, Named("nstart") = 10);
+  }
+};
+
+// [[Rcpp::export]]
+List performKMeansClustering(NumericMatrix inputData, int k) {
+  KMeansClustering kmeansClustering(inputData, k);
+  return kmeansClustering.performClustering();
+}
+
+      
+      
+      
+      ')
+      k <- 3
+      kmeans_result <- performKMeansClustering(as.matrix(k_mean_data), k)
+      
+      
     
     # Get cluster assignments and cluster centers
     clusters <- kmeans_result$cluster
