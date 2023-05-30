@@ -32,8 +32,13 @@ library(Rcpp)
 #                 reload = TRUE)
 library(PredictFutureOrder)
 useShinyjs(rmd = TRUE)
+
 # setwd('C:\\Users\\yangxinchen\\Desktop\\yxcgit\\visualization_platform')
 # setwd('D:/R-programing/visualization_platform')
+=======
+#setwd('C:\\Users\\yangxinchen\\Desktop\\yxcgit\\visualization_platform')
+#setwd('D:/R-programing/visualization_platform')
+
 #getwd()
 # Load functions
 source('function/xgboost_forcast_coustomer.R')
