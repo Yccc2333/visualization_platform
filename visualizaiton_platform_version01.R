@@ -116,7 +116,6 @@ k_mean_data <- data.frame(user_id = new_order_data$user_id, recency = new_order_
 #     NumericVector recency = new_order_data["min_day"];
 #     NumericVector frequency = new_order_data["order_count"];
 #     NumericVector monetary = new_order_data["total_price"];
-# 
 #     // Create k_mean_data data frame
 #     DataFrame k_mean_data = DataFrame::create(
 #       _["user_id"] = user_id,
@@ -124,7 +123,6 @@ k_mean_data <- data.frame(user_id = new_order_data$user_id, recency = new_order_
 #       _["frequency"] = frequency,
 #       _["monetary"] = monetary
 #     );
-# 
 #     // Return the k_mean_data data frame
 #     return k_mean_data;
 #   }
