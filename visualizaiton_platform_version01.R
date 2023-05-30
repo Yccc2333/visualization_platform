@@ -18,23 +18,24 @@ library(parsnip)
 library(timetk)
 library(xgboost)
 library(ggthemes)
+#install.packages('highcharter')
 library(highcharter)
 library(fmsb)
 # install.packages("Rcpp")
 library(Rcpp)
-# install.packages("knitr")
-library(knitr)
-install.packages("kableExtra")
-library(kableExtra)
-install.packages("htmlTable")
-library(htmlTable)
-library(DT)
-
+#devtools::document(pkg = paste0("own_package/", 
+#                            "PredictFutureOrder"))
+#devtools::check(paste0("own_package/", 
+#                "PredictFutureOrder"))  #check whether there's problem
+#devtools::install(pkg = paste0("own_package/", 
+#                             "PredictFutureOrder"), 
+#                 reload = TRUE)
+library(PredictFutureOrder)
 useShinyjs(rmd = TRUE)
-setwd('C:\\Users\\yangxinchen\\Desktop\\yxcgit\\visualization_platform')
-getwd()
+#setwd('C:\\Users\\yangxinchen\\Desktop\\yxcgit\\visualization_platform')
+#setwd('D:/R-programing/visualization_platform')
+#getwd()
 # Load functions
-source("function/TS_function.R")
 source('function/xgboost_forcast_coustomer.R')
 
 ########################Data processing for page 3 ##########################
@@ -116,6 +117,7 @@ k_mean_data <- data.frame(user_id = new_order_data$user_id, recency = new_order_
 #     NumericVector recency = new_order_data["min_day"];
 #     NumericVector frequency = new_order_data["order_count"];
 #     NumericVector monetary = new_order_data["total_price"];
+#     
 #     // Create k_mean_data data frame
 #     DataFrame k_mean_data = DataFrame::create(
 #       _["user_id"] = user_id,
@@ -123,6 +125,7 @@ k_mean_data <- data.frame(user_id = new_order_data$user_id, recency = new_order_
 #       _["frequency"] = frequency,
 #       _["monetary"] = monetary
 #     );
+#     
 #     // Return the k_mean_data data frame
 #     return k_mean_data;
 #   }
@@ -137,9 +140,8 @@ k_mean_data <- data.frame(user_id = new_order_data$user_id, recency = new_order_
 
 ########################Data processing for page 5 and page 6 ##########################
 # Load data
-sales_data_raw <- read_csv('data/orders02.csv') 
-#country_codes <- read_csv("https://datahub.io/core/country-list/r/data.csv")
-#country_codes <- read_csv('https://raw.githubusercontent.com/plotly/datasets/master/2014_world_gdp_with_codes.csv')
+#setwd('D:/R-programing/visualization_platform')
+sales_data_raw <- read_csv('data/orders02.csv',show_col_types = FALSE) 
 
 # Select relevant data
 processed_data_tbl <- sales_data_raw %>% 
@@ -586,7 +588,6 @@ server <- function(input, output) {
     
     # Add cluster assignments to the dataframe
     k_mean_data$group <- clusters
-   
     # Group the data by the 'group' column and calculate the count in each group
     group_counts <- k_mean_data %>% 
       group_by(group) %>% 
@@ -604,26 +605,26 @@ server <- function(input, output) {
   })
   
   output$column_table <- DT::renderDataTable({
-
-      scaled_data <- k_mean_data %>%
-        select(-user_id) %>%
-        scale()
-      # Perform k-means clustering
-      k <- 3  # Number of clusters
-      kmeans_result <- kmeans(scaled_data, centers = k, nstart = 10)
-
-      # Get cluster assignments and cluster centers
-      clusters <- kmeans_result$cluster
-      centroids <- kmeans_result$centers
-
-      # Add cluster assignments to the dataframe
-      k_mean_data$group <- clusters
-
-      datatable(k_mean_data, options = list(dom = 't', paging = FALSE, searching = FALSE))
-      
-      
-      
-
+    
+    scaled_data <- k_mean_data %>%
+      select(-user_id) %>%
+      scale()
+    # Perform k-means clustering
+    k <- 3  # Number of clusters
+    kmeans_result <- kmeans(scaled_data, centers = k, nstart = 10)
+    
+    # Get cluster assignments and cluster centers
+    clusters <- kmeans_result$cluster
+    centroids <- kmeans_result$centers
+    
+    # Add cluster assignments to the dataframe
+    k_mean_data$group <- clusters
+    
+    datatable(k_mean_data, options = list(dom = 't', paging = FALSE, searching = FALSE))
+    
+    
+    
+    
   })
   
   ######## Reactive event for page5 #########################
@@ -661,6 +662,8 @@ server <- function(input, output) {
     
   }, once = TRUE) 
 
+
+
   # Reactive expression based on input
   time_plot_tbl <- reactive({
     
@@ -674,10 +677,11 @@ server <- function(input, output) {
     
     if (input$forecast_mode) {
       time_plot_tbl() %>%
-        generate_forecast(n_future = input$n_future, seed = 123)
+        generate_forecast(length_out  = input$n_future, seed = 123)
     }
     
   })
+
   #############################################################
 
   
@@ -696,7 +700,7 @@ server <- function(input, output) {
     
   })
   opts <- list(
- 
+    
     pageLength = 10,
     searchHighlight = TRUE
   )
