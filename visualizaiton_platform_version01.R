@@ -23,6 +23,13 @@ library(highcharter)
 library(fmsb)
 # install.packages("Rcpp")
 library(Rcpp)
+# install.packages("knitr")
+library(knitr)
+# install.packages("kableExtra")
+library(kableExtra)
+# install.packages("htmlTable")
+library(htmlTable)
+library(DT)
 #devtools::document(pkg = paste0("own_package/", 
 #                            "PredictFutureOrder"))
 #devtools::check(paste0("own_package/", 
@@ -32,16 +39,67 @@ library(Rcpp)
 #                 reload = TRUE)
 library(PredictFutureOrder)
 useShinyjs(rmd = TRUE)
-
 # setwd('C:\\Users\\yangxinchen\\Desktop\\yxcgit\\visualization_platform')
 # setwd('D:/R-programing/visualization_platform')
-=======
-#setwd('C:\\Users\\yangxinchen\\Desktop\\yxcgit\\visualization_platform')
-#setwd('D:/R-programing/visualization_platform')
-
 #getwd()
 # Load functions
 source('function/xgboost_forcast_coustomer.R')
+
+########################Data processing for page 1 ##########################
+user_behavior <- read.csv("data/user_behavior.csv")
+user_activity_daily <- function(data){
+  activity <- data %>%
+    group_by(date) %>%
+    summarize(UV = n_distinct(user_id), PV = n())
+  return (activity)
+}
+Daily <- user_activity_daily(user_behavior)
+Daily$date <- as.Date.factor(Daily$date)
+
+average_pv1 <- function(data){
+  average1 <-
+    data %>%
+    group_by(date) %>%
+    summarize(UV = n_distinct(user_id), PV = n()) %>%
+    mutate(PVmeandaily = PV/UV)
+  return(average1)
+}
+average_pv2 <- function(data){
+  average2 <-
+    data %>%
+    group_by(hour) %>%
+    summarize(UV = n_distinct(user_id), PV = n()) %>%
+    mutate(PVmeanhourly = PV/UV)
+  return(average2)
+}
+Average1 <- average_pv1(user_behavior)
+Average1$date <- as.Date.factor(Average1$date)
+Average1$Average_date <- Average1$date
+Average2 <- average_pv2(user_behavior)
+Average2$Average_hour <- Average2$hour
+
+min_date1 <- min(Daily$date[!is.na(Daily$date)])
+max_date2 <- max(Daily$date[!is.na(Daily$date)])
+min_date_average <- min(Average1$Average_date[!is.na(Average1$Average_date)])
+max_date_average <- max(Average1$Average_date[!is.na(Average1$Average_date)])
+
+########################Data processing for page 2 ##########################
+orders <- read.csv("data/orders.csv")
+user_order <- function(data){
+  user <-  data %>%
+    group_by(date) %>%
+    summarise(distinct_users = n_distinct(user_id),
+              total_products = n(),
+              total_price = sum(product_price))
+  return(user)
+}
+User <- user_order(orders)
+User$date <- as.Date.factor(User$date)
+User$date1 <- User$date
+min_date3 <- min(User$date1[!is.na(User$date)])
+max_date4 <- max(User$date1[!is.na(User$date)])
+
+
 
 ########################Data processing for page 3 ##########################
 user_behavior_data <- read_csv('data/user_behavior.csv') 
@@ -114,30 +172,7 @@ new_order_data <- order_data %>%
 
 # Create data frame
 k_mean_data <- data.frame(user_id = new_order_data$user_id, recency = new_order_data$min_day, frequency = new_order_data$order_count, monetary = new_order_data$total_price)
-# cppFunction('
-#   // Function to create k_mean_data data frame
-#   DataFrame createKMeanData(DataFrame new_order_data) {
-#     // Extract columns from new_order_data
-#     IntegerVector user_id = new_order_data["user_id"];
-#     NumericVector recency = new_order_data["min_day"];
-#     NumericVector frequency = new_order_data["order_count"];
-#     NumericVector monetary = new_order_data["total_price"];
-# 
-#     // Create k_mean_data data frame
-#     DataFrame k_mean_data = DataFrame::create(
-#       _["user_id"] = user_id,
-#       _["recency"] = recency,
-#       _["frequency"] = frequency,
-#       _["monetary"] = monetary
-#     );
-# 
-#     // Return the k_mean_data data frame
-#     return k_mean_data;
-#   }
-# ')
-# 
-# # # Use the C++ function to create k_mean_data data frame
-# k_mean_data <- createKMeanData(new_order_data)
+
 
 
 
@@ -184,18 +219,45 @@ ui <- dashboardPage(
   ),
   dashboardBody(
     tabItems(
-      # Page 1
+      #Page 1
       tabItem(
         tabName = "page1",
         sidebarLayout(
           sidebarPanel(
+            shinyWidgets::airDatepickerInput(
+              inputId = "date",
+              label = h4("Date Interval"),
+              value = c(min_date1,
+                        max_date2),
+              separator = " to ",
+              range = TRUE,
+              minDate  = min_date1,
+              maxDate = max_date2,
+              dateFormat = "yyyy-MM-dd",
+              autoClose = TRUE,
+              clearButton = TRUE,
+              width = "100%",
+              addon = "none"
+            ),
+            sliderInput("hour", HTML("Hour Interval:"),
+                        min = 0, max = 24, value = c(0, 24), step = 1),
+            sliderInput("Average_date", HTML("Average_date Interval:"),
+                        min = min_date_average, 
+                        max = max_date_average, 
+                        value = c(min_date_average, max_date_average)),
+            sliderInput("Average_hour", HTML("Average_hour Interval:"),
+                        min = 0, max = 24, value = c(0, 24), step = 1)
             # Add sidebar content for page 1 here
-            selectInput("page1_filter", "Page 1 Filter", choices = c("Option 1", "Option 2"), selected = "Option 1")
+            
           ),
           mainPanel(
-            h2("Page 1"),
+            h2("Customer Activity Analysis"),
+            plotOutput("plot_user_activity_daily"),
+            plotOutput("plot_user_activity_hour"),
+            plotOutput("plot_average1"),
+            plotOutput("plot_average2")
             # Add main panel content for page 1 here
-            textOutput("page1_output")
+            
           )
         )
       ),
@@ -204,13 +266,19 @@ ui <- dashboardPage(
         tabName = "page2",
         sidebarLayout(
           sidebarPanel(
+            sliderInput("date1", HTML("Date Interval:"),
+                        min = min_date3, 
+                        max = max_date4, 
+                        value = c(min_date3, max_date4))
             # Add sidebar content for page 2 here
-            selectInput("page2_filter", "Page 2 Filter", choices = c("Option A", "Option B"), selected = "Option A")
+            
           ),
           mainPanel(
-            h2("Page 2"),
+            h2("Customer Order Analysis"),
+            plotOutput("plot_user_order"),
+            plotOutput("plot_hot_product")
             # Add main panel content for page 2 here
-            textOutput("page2_output")
+            
           )
         )
       ),
@@ -425,13 +493,213 @@ ui <- dashboardPage(
 server <- function(input, output) {
   # Server logic goes here
   
-  output$page1_output <- renderText({
-    paste("Selected option in Page 1:", input$page1_filter)
+  ######## Reactive event for page1 #########################
+  data_filtered1 <- reactive({Daily %>%
+      filter(
+        between(date, input$date[1], input$date[2]))
+  })
+  plot_user_activity_daily <- function(data){
+    A <- data_filtered1()
+    if(colnames(A)[2] == "UV"){
+      par(mfrow = c(1,2)) 
+      barplot(A$UV,
+              main = "Daily Activity Chart-UV",
+              names.arg = A$date,
+              cex.names = 0.65,
+              ylab = "Number",
+              col = "orange",
+              las = 2
+      )
+      legend("topright", "UV", cex = 0.65, fill = "orange")
+    } else {
+      "Please run user_activity_daily to generate UV"
+    }
+    if(colnames(A)[3] == "PV"){
+      barplot(A$PV,
+              main = "Daily Activity Chart-PV",
+              names.arg = A$date,
+              cex.names = 0.65,
+              ylab = "Number",
+              col = "orange",
+              las = 2
+      )
+      legend("topright", "PV", cex = 0.65, fill = "orange")
+    } else {
+      "Please run user_activity_daily to generate PV"
+    }
+  }
+  output$plot_user_activity_daily <- renderPlot(plot_user_activity_daily(data_filtered1()))
+  
+  user_activity_hour <- function(data){
+    hour <- data %>%
+      group_by(hour) %>%
+      summarize(UV = n_distinct(user_id), PV = n())
+    return (hour)
+  }
+  Hourly <- user_activity_hour(user_behavior)
+  data_filtered2 <- reactive({Hourly %>%
+      filter(
+        between(hour, input$hour[1], input$hour[2]))
+  })
+  plot_user_activity_hour <- function(data){
+    B <- data_filtered2()
+    if(colnames(B)[2] == "UV"){
+      par(mfrow = c(1,2)) 
+      barplot(B$UV,
+              main = "Hourly Activity Chart-UV",
+              names.arg = B$hour,
+              cex.names = 0.65,
+              xlab = "Date",
+              ylab = "Number",
+              col = "green",
+              las = 1
+      )
+      legend("topright", "UV", cex = 0.65, fill = "green")
+    } else {
+      "Please run user_activity_hour to generate UV"
+    } 
+    if(colnames(B)[3] == "PV"){
+      barplot(B$PV,
+              main = "Hourly Activity Chart-PV",
+              names.arg = B$hour,
+              cex.names = 0.65,
+              xlab = "Date",
+              ylab = "Number",
+              col = "green",
+              las = 1
+      )
+      legend("topright", "PV", cex = 0.65, fill = "green")
+    } else {
+      "Please run user_activity_hour to generate PV"
+    }
+  }
+  output$plot_user_activity_hour <- renderPlot(plot_user_activity_hour(data_filtered2()))
+  
+  data_filtered3 <- reactive({Average1 %>%
+      filter(
+        between(Average_date, input$Average_date[1], input$Average_date[2]))
   })
   
-  output$page2_output <- renderText({
-    paste("Selected option in Page 2:", input$page2_filter)
+  plot_average1 <- function(data){
+    C <- data_filtered3()
+    barplot(C$PVmeandaily,
+            main = "Daily PV Per Capita",
+            names.arg = C$date,
+            cex.names = 0.65,
+            ylab = "Number",
+            col = "blue",
+            las = 2
+    )
+    
+  }
+  output$plot_average1 <- renderPlot(plot_average1(date_filtered3()))
+  
+  data_filtered4 <- reactive({Average2 %>%
+      filter(
+        between(Average_hour, input$Average_hour[1], input$Average_hour[2]))
   })
+  plot_average2 <- function(data){
+    D <- data_filtered4()
+    barplot(D$PVmeanhourly,
+            main = "Hourly PV Per Capita",
+            names.arg = D$hour,
+            cex.names = 0.65,
+            ylab = "Number",
+            col = "blue",
+            las = 1
+    )
+    
+  }
+  output$plot_average2 <- renderPlot(plot_average2(date_filtered4()))
+  
+  ######## Reactive event for page2 #########################
+  data_filtered5 <- reactive({User %>%
+      filter(
+        between(date, input$date1[1], input$date1[2]))
+  })
+  
+  plot_user_order <- function(data){
+    D <- data_filtered5()
+    if(colnames(D)[2] == "distinct_users"){
+      par(mfrow = c(1,3))
+      barplot(D$distinct_users,
+              main = "Order-Buyers",
+              names.arg = D$date,
+              cex.names = 0.8,
+              ylab = "Number",
+              col = "orange",
+              las = 2
+      )
+      legend("topright", "Buyers", cex = 0.8, fill = "orange")
+    } else {
+      "Please run user_order to generate distinct_users"
+    }
+    if(colnames(D)[3]== "total_products"){
+      barplot(D$total_products,
+              main = "Order-Orders",
+              names.arg = D$date,
+              cex.names = 0.8,
+              col = "green",
+              las = 2
+      )
+      legend("topright", "Orders", cex = 0.8, fill = "green")
+    } else {
+      "Please run user_order to generate total_products"
+    }
+    if(colnames(D)[4]== "total_price"){
+      barplot(D$total_price,
+              main = "Order-GMV",
+              names.arg = D$date,
+              cex.names = 0.8,
+              col = "blue",
+              las = 2
+      )
+      legend("topright", "GMV", cex = 0.8, fill = "blue")
+    } else {
+      "Please run user_order to generate total_price"
+    }
+  }
+  output$plot_user_order <- renderPlot(plot_user_order(data_filtered5()))
+  
+  hot_product <- function(data){
+    product <- data %>% 
+      group_by(product_name) %>% 
+      summarise(count_order = n(),
+                sum_product_price = sum(product_price)) 
+    
+    return(product)
+  }
+  
+  plot_hot_product <- function(data){
+    E <- hot_product(data)
+    if(colnames(E)[2]== "count_order"){
+      par(mfrow = c(1,2))
+      barplot(E$count_order,
+              main = "Hot product-Sales Volume",
+              names.arg = E$product_name,
+              cex.names = 0.65,
+              ylab = "Sales Money",
+              col = "red",
+              las = 2
+      )
+      legend("topleft", "Sales Volume", cex = 0.8, fill = "red")
+    } else {
+      "Please run hot_product to generate count_order"
+    }
+    if(colnames(E)[3]== "sum_product_price"){
+      barplot(E$sum_product_price,
+              main = "Hot product-Sales Money",
+              names.arg = E$product_name,
+              cex.names = 0.65,
+              col = "orange",
+              las = 2
+      )
+      legend("topleft", "Sales Money", cex = 0.8, fill = "orange")
+    } else {
+      "Please run hot_product to generate sum_product_price"
+    }
+  }
+  output$plot_hot_product <- renderPlot(plot_hot_product(orders))
   
  
 
@@ -529,6 +797,9 @@ server <- function(input, output) {
     k_mean_data$group <- clusters
     
     # Restore cluster center coordinates
+    #This calculation is necessary when you want to interpret or visualize the 
+    #cluster centers in the same scale as the original variables, 
+    #allowing for a meaningful understanding of their positions in the original data space.
     centroids_restored <- centroids * attr(scaled_data, "scaled:scale") + attr(scaled_data, "scaled:center")
     
     # Plot the radar chart
